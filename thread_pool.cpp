@@ -57,7 +57,7 @@ thread_pool_t* thread_pool_create(int thrd_count, int queue_size) {
     pool->task_queue.head = 0;
     pool->task_queue.tail = 0;
     pool->task_queue.count = 0;
-    pool->started = pool->closed = 0;
+    pool->started = pool->closed = 0; 
 
     // 创建任务队列
     pool->task_queue.queue = (task_t*)malloc(sizeof(task_t)*queue_size);

@@ -101,8 +101,8 @@ struct targetServer {
     int sockfd;
     sockaddr_in* addr;
     size_t addr_len;
-    std::string serverAuth;
-    std::string serverKey;
+    std::string* serverAuth;
+    std::string* serverKey;
 };
 
 template<typename T>
@@ -181,7 +181,7 @@ void serverInit(const targetServer* server) {
     char ipv4addr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(server->addr->sin_addr), ipv4addr, sizeof(ipv4addr));
     std::string path = "/api";
-    std::string http_request = httpRequestCreate(port, host, path, server->key, server->auth);
+    std::string http_request = httpRequestCreate(port, host, path, *server->serverKey, *server->serverAuth);
     ref = send_msg(http_request, server);
     if (ref == 0) {
         int ref_recv = recv(server->sockfd, buf, buf_len, 0);
@@ -203,8 +203,8 @@ int main() {
     std::string host_rcon = "159.75.167.150";
     int port_rcon = 11451;
     targetServer* server = addrInit(port_rcon, host_rcon);
-    server->serverAuth = auth;
-    server->serverKey = key;
+    server->serverAuth = &auth;
+    server->serverKey = &key;
 
     // serverInit(server);
 
@@ -241,8 +241,6 @@ int main() {
 
     //     std::cout << respone["data"]["nickname"] << std::endl;
     // }
-
-
 
 
 

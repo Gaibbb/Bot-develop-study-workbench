@@ -5,6 +5,9 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#define DATA_BUFFSIZE 4096
+#define RCON_PID 0xBADC0DE
+
 constexpr int SERVERDATA_AUTH = 3;
 constexpr int SERVERDATA_AUTH_RESPONSE = 2;
 constexpr int SERVERDATA_EXECCOMMAND = 2;
@@ -41,6 +44,8 @@ bool RCONClient::connect() {
     if (::connect(socketFd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
         std::cerr << "Error connecting: " << strerror(errno) << "\n";
         return false;
+    } else {
+        printf("RCON Server connect successfully...\n");
     }
 
     return authenticate();
@@ -114,6 +119,46 @@ std::vector<char> RCONClient::createPacket(int id, int type, const std::string& 
     packet[size + 2] = 0;
     packet[size + 3] = 0;
     return packet;
+}
+
+rc_packet *RCONClient::buildPacket(int id, int cmd, char *s1) {
+    static rc_packet packet = {0, 0, 0, { 0x00 }};
+
+    int len = strlen(s1);
+    if (len >= DATA_BUFFSIZE) {
+        fprintf(stderr, "Warning: Command string too long (%d). Maximum allowed: %d.\n", len, DATA_BUFFSIZE - 1);
+        return NULL;
+    }
+
+    packet.size = sizeof(int) * 2 + len + 2;
+    packet.id = id;
+    packet.cmd = cmd;
+    strncpy(packet.data, s1, DATA_BUFFSIZE - 1);
+
+    return &packet;
+}
+
+
+int RCONClient::rconAuth(int sockfd, char *passwd) {
+    int ret;
+
+    rc_packet *packet = buildPacket(RCON_PID, SERVERDATA_AUTH, passwd);
+    if (packet == NULL)
+        return 0;
+
+    int len;
+    int total = 0;
+    int bytesleft;
+    
+    bytesleft = len = packet->size + sizeof(int);
+
+    while (total < len) {
+        ret = send(sockfd, (char *) packet + total, bytesleft, 0);
+        if(ret == -1) break;
+        total += ret;
+        bytesleft -= ret;
+    }
+
 }
 
 bool RCONClient::readPacket(int& id, int& type, std::string& body) {
